@@ -18,15 +18,19 @@ class Illusionist
 	        
 	        #parse query string
 	        query_hash = Hash[*env['QUERY_STRING'].split(/[&=]/)]
-	        defputs query_hash.inspect
+
 	        #check for resize commands
 	        if(query_hash.has_key?('w') || query_hash.has_key?('width'))
+	            #determine width and height
+	            width = (query_hash['width'] ||= query_hash['w']).to_i
+	            height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
+	            
                 #come up with rewrite file name
                 file_name = env["REQUEST_PATH"].split('.').first
                 extension = env["REQUEST_PATH"].split('.').last
-	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{query_hash['w']}x#{query_hash['w']}.#{extension}"
+	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}.#{extension}"
 	            #create the illusion if nessicary
-	            Image.read(full_path).first().scale(query_hash['w'].to_i, query_hash['w'].to_i).write(illusion) unless File.exists?(illusion)
+	            Image.read(full_path).first().scale(width, height).write(illusion) unless File.exists?(illusion)
                 self.body = File.new(illusion)
 	        else
 	            self.body = File.new(full_path)
