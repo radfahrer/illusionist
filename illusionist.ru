@@ -24,13 +24,40 @@ class Illusionist
 	            #determine width and height
 	            width = (query_hash['width'] ||= query_hash['w']).to_i
 	            height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
-	            
+	            #check resize mode, default to pad
+	            mode = (query_hash['mode'] ||= 'pad')
+                
                 #come up with rewrite file name
                 file_name = env["REQUEST_PATH"].split('.').first
                 extension = env["REQUEST_PATH"].split('.').last
-	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}.#{extension}"
+	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
+	            
+	            
+                
 	            #create the illusion if nessicary
-	            Image.read(full_path).first().scale(width, height).write(illusion) unless File.exists?(illusion)
+	            unless File.exists?(illusion)
+	                #choose a resize function 
+    	            resize_function =  case mode
+                        when 'max'      then :resize_to_fit
+                        when 'pad'      then :pad
+                        when 'crop' then :resize_to_fill
+                        when 'stretch'  then :scale
+                        else :resize_to_fill
+                    end
+                    
+                    #call the appropriate function
+                    if resize_function == :pad #one of these things is not like the others
+                        source = Image.read(full_path).first().resize_to_fit!(width, height)
+                        target = Image.new(width, height) do
+                          self.background_color = 'white'
+                        end
+                        target.composite(source, CenterGravity, AtopCompositeOp).write(illusion)
+                    else
+                        Image.read(full_path).first().send(resize_function, width, height).write(illusion)
+                    end	                
+                end
+                
+                #reate the file
                 self.body = File.new(illusion)
 	        else
 	            self.body = File.new(full_path)
