@@ -8,7 +8,8 @@ Install
 =======
 
 Illustionist is now a gem istalling should be as easy as:
-  gem install illusionist
+    
+    gem install illusionist
 
 
 Implemented Features
