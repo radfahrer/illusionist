@@ -1,5 +1,4 @@
-require 'RMagick'
-#include Magick
+require 'RMagick' 
 
 class Illusionist
 	include Magick
@@ -9,7 +8,7 @@ class Illusionist
 	    @response_code = 200
     end
   
-    def call(env) 
+    def call(env)
 	    full_path = Dir.pwd + env["REQUEST_PATH"] 
 	    if File.exist? full_path
 	        self.response_code = 200
@@ -37,7 +36,7 @@ class Illusionist
 	            #create the illusion if nessicary
 	            unless File.exists?(illusion)
 	                #choose a resize function 
-    	            resize_function =  case mode
+	                resize_function =  case mode
                         when 'max'      then :resize_to_fit
                         when 'pad'      then :pad
                         when 'crop' then :resize_to_fill
@@ -71,5 +70,3 @@ class Illusionist
   end
   
 end
-
-run Illusionist.new

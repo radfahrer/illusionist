@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'rack'
+require 'illusionist'
+
+options = {
+  :Host => '127.0.0.1',
+  :Port => '8080'
+}
+
+merlin = Illusionist.new
+ 
+Rack::Handler::Thin.run(merlin, options) do |server|
+  [:INT, :TERM].each { |sig| trap(sig) { server.stop } }
+end
