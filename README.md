@@ -1,3 +1,5 @@
+[![Code Climate](https://codeclimate.com/github/radfahrer/illusionist.png)](https://codeclimate.com/github/radfahrer/illusionist)
+
 Illusionist
 ===========
 
