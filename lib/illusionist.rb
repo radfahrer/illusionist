@@ -30,27 +30,21 @@ class Illusionist
                 file_name = env["REQUEST_PATH"].split('.').first
                 extension = env["REQUEST_PATH"].split('.').last
 	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
-	            
-	            
                 
 	            #create the illusion if nessicary
 	            unless File.exists?(illusion)
 	                #choose a resize function 
-	                resize_function =  case mode
-                        when 'max'      then :resize_to_fit
-                        when 'pad'      then :pad
-                        when 'crop' then :resize_to_fill
-                        when 'stretch'  then :scale
-                        else :resize_to_fill
-                    end
+	                resize_function =  self.resize_function(mode)
                     
                     #call the appropriate function
                     if resize_function == :pad #one of these things is not like the others
                         source = Image.read(full_path).first().resize_to_fit!(width, height)
+                        #select the appropriate background color
+                        background_color = source.opaque? ? 'white': 'Transparent' 
                         target = Image.new(width, height) do
-                          self.background_color = 'white'
+                                self.background_color = background_color
                         end
-                        target.composite(source, CenterGravity, AtopCompositeOp).write(illusion)
+                        target.composite(source, CenterGravity, OverCompositeOp).write(illusion)
                     else
                         Image.read(full_path).first().send(resize_function, width, height).write(illusion)
                     end	                
@@ -67,6 +61,16 @@ class Illusionist
 	        self.body = ["#{env.inspect}"]
 	    end
 	    [self.response_code, self.headers, self.body]
+  end
+  
+  def resize_function(mode)
+      case mode
+          when 'max'      then :resize_to_fit
+          when 'pad'      then :pad
+          when 'crop' then :resize_to_fill
+          when 'stretch'  then :scale
+          else :resize_to_fill
+      end
   end
   
 end
