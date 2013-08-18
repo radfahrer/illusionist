@@ -2,75 +2,80 @@ require 'RMagick'
 
 class Illusionist
 	include Magick
-    attr_accessor :response_code, :headers, :body
+	attr_accessor :response_code, :headers, :body
   
-    def initialize
-	    @response_code = 200
-    end
-  
-    def call(env)
-	    full_path = Dir.pwd + env["REQUEST_PATH"] 
-	    if File.exist? full_path
-	        self.response_code = 200
-	        content_type = `file -Ib #{full_path}`.gsub(/\n/,"")
-	        self.headers = {"Content-Type" => content_type}
-	        
-	        #parse query string
-	        query_hash = Hash[*env['QUERY_STRING'].split(/[&=]/)]
+	def initialize
+		@response_code = 200
+	end
+ 
+	def call(env)
+		full_path = Dir.pwd + env["REQUEST_PATH"] 
+		if File.exist? full_path
+			self.response_code = 200
+			content_type = `file -Ib #{full_path}`.gsub(/\n/,"")
+			self.headers = {"Content-Type" => content_type}
+			
+			#parse query string
+			query_hash = Hash[*env['QUERY_STRING'].split(/[&=]/)]
 
-	        #check for resize commands
-	        if(query_hash.has_key?('w') || query_hash.has_key?('width'))
-	            #determine width and height
-	            width = (query_hash['width'] ||= query_hash['w']).to_i
-	            height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
-	            #check resize mode, default to pad
-	            mode = (query_hash['mode'] ||= 'pad')
-                
-                #come up with rewrite file name
-                file_name = env["REQUEST_PATH"].split('.').first
-                extension = env["REQUEST_PATH"].split('.').last
-	            illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
-                
-	            #create the illusion if nessicary
-	            unless File.exists?(illusion)
-	                #choose a resize function 
-	                resize_function =  self.resize_function(mode)
-                    
-                    #call the appropriate function
-                    if resize_function == :pad #one of these things is not like the others
-                        source = Image.read(full_path).first().resize_to_fit!(width, height)
-                        #select the appropriate background color
-                        background_color = source.opaque? ? 'white': 'Transparent' 
-                        target = Image.new(width, height) do
-                                self.background_color = background_color
-                        end
-                        target.composite(source, CenterGravity, OverCompositeOp).write(illusion)
-                    else
-                        Image.read(full_path).first().send(resize_function, width, height).write(illusion)
-                    end	                
-                end
-                
-                #reate the file
-                self.body = File.new(illusion)
-	        else
-	            self.body = File.new(full_path)
-	        end
-	    else
-	        self.response_code = 404
-	        self.headers = {"Content-Type" => "text/plain"}
-	        self.body = ["#{env.inspect}"]
-	    end
-	    [self.response_code, self.headers, self.body]
-  end
+			#check for resize commands
+			if(query_hash.has_key?('w') || query_hash.has_key?('width'))
+				#determine width and height
+				width = (query_hash['width'] ||= query_hash['w']).to_i
+				height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
+				#check resize mode, default to pad
+				mode = (query_hash['mode'] ||= 'pad')
+				
+				#come up with rewrite file name
+				file_name = env["REQUEST_PATH"].split('.').first
+				extension = env["REQUEST_PATH"].split('.').last
+				illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
+				
+				#create the illusion if nessicary
+				unless File.exists?(illusion)
+					#choose a resize function 
+					resize_function =  self.resize_function(mode)
+					
+					#write the file with the appropriate function
+					write_resized_image(resize_function)
+				end
+				
+				#reate the file
+				self.body = File.new(illusion)
+			else
+				self.body = File.new(full_path)
+			end
+		else
+			self.response_code = 404
+			self.headers = {"Content-Type" => "text/plain"}
+			self.body = ["#{env.inspect}"]
+		end
+		[self.response_code, self.headers, self.body]
+	end
+
+	def resize_function(mode)
+		case mode
+			when 'max'	  then :resize_to_fit
+			when 'pad'	  then :pad
+			when 'crop'	  then :resize_to_fill
+			when 'stretch'  then :scale
+			else :resize_to_fill
+		end
+	end
   
-  def resize_function(mode)
-      case mode
-          when 'max'      then :resize_to_fit
-          when 'pad'      then :pad
-          when 'crop' then :resize_to_fill
-          when 'stretch'  then :scale
-          else :resize_to_fill
-      end
-  end
+	def write_resized_image(resize_function)
+		if resize_function == :pad #one of these things is not like the others
+			source = Image.read(full_path).first().resize_to_fit!(width, height)
+			#select the appropriate background color
+			background_color = source.opaque? ? 'white': 'Transparent' 
+			target = Image.new(width, height) do
+				self.background_color = background_color
+			end
+			#composite the two images
+			target.composite(source, CenterGravity, OverCompositeOp).write(illusion)
+		else
+			Image.read(full_path).first().send(resize_function, width, height).write(illusion)
+		end
+	end
   
 end
