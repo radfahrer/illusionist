@@ -1,4 +1,5 @@
 require 'RMagick' 
+require 'Illusion'
 
 class Illusionist
 	include Magick
@@ -20,28 +21,16 @@ class Illusionist
 
 			#check for resize commands
 			if(query_hash.has_key?('w') || query_hash.has_key?('width'))
-				#determine width and height
-				width = (query_hash['width'] ||= query_hash['w']).to_i
-				height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
-				#check resize mode, default to pad
-				mode = (query_hash['mode'] ||= 'pad')
-				
-				#come up with rewrite file name
-				file_name = env["REQUEST_PATH"].split('.').first
-				extension = env["REQUEST_PATH"].split('.').last
-				illusion = "#{Dir.pwd}/illusions/#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
+				issusion = Illusion.new query_hash 
 				
 				#create the illusion if nessicary
-				unless File.exists?(illusion)
-					#choose a resize function 
-					resize_function =  self.resize_function(mode)
-					
-					#write the file with the appropriate function
-					write_resized_image(resize_function)
+				unless illustion.exists?
+					#write the illusion
+					illusion.write_resized_image
 				end
 				
 				#reate the file
-				self.body = File.new(illusion)
+				self.body = Illusion.read
 			else
 				self.body = File.new(full_path)
 			end
@@ -52,30 +41,4 @@ class Illusionist
 		end
 		[self.response_code, self.headers, self.body]
 	end
-
-	def resize_function(mode)
-		case mode
-			when 'max'	  then :resize_to_fit
-			when 'pad'	  then :pad
-			when 'crop'	  then :resize_to_fill
-			when 'stretch'  then :scale
-			else :resize_to_fill
-		end
-	end
-  
-	def write_resized_image(resize_function)
-		if resize_function == :pad #one of these things is not like the others
-			source = Image.read(full_path).first().resize_to_fit!(width, height)
-			#select the appropriate background color
-			background_color = source.opaque? ? 'white': 'Transparent' 
-			target = Image.new(width, height) do
-				self.background_color = background_color
-			end
-			#composite the two images
-			target.composite(source, CenterGravity, OverCompositeOp).write(illusion)
-		else
-			Image.read(full_path).first().send(resize_function, width, height).write(illusion)
-		end
-	end
-  
 end
