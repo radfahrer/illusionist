@@ -1,7 +1,7 @@
 class Illusion
-	attr_accessor :width, :height, :mode, :extension
+	attr_accessor :width, :height, :mode, :extension, :base_name, :base_path
 	
-	def initialize(query_hash)
+	def initialize(query_hash, env, base_path)
 		#determine width and height
 		self.width = (query_hash['width'] ||= query_hash['w']).to_i
 		self.height = (query_hash['height'] ||= query_hash['h'] ||= width).to_i
@@ -11,10 +11,11 @@ class Illusion
 		#come up with rewrite file name
 		self.base_name = env["REQUEST_PATH"].split('.').first
 		self.extension = env["REQUEST_PATH"].split('.').last
+		self.base_path = base_path
 	end
 	
 	def file_name
-		"#{file_name}_r#{width}x#{height}_#{mode}.#{extension}"
+		"#{self.base_name}_r#{self.width}x#{self.height}_#{self.mode}.#{self.extension}"
 	end
 	
 	def path
@@ -40,8 +41,8 @@ class Illusion
 	end
 	
 	def write_resized_image
-		if self,resize_function == :pad #one of these things is not like the others
-			source = Image.read(full_path).first().resize_to_fit!(width, height)
+		if self.resize_function == :pad #one of these things is not like the others
+			source = Image.read(self.base_path).first().resize_to_fit!(width, height)
 			#select the appropriate background color
 			background_color = source.opaque? ? 'white': 'Transparent'
 			#create background image to composite with 
@@ -51,7 +52,7 @@ class Illusion
 			#composite the two images
 			target.composite(source, CenterGravity, OverCompositeOp).write(illusion)
 		else
-			Image.read(full_path).first().send(self,resize_function, width, height).write(illusion)
+			Image.read(self.base_path).first().send(self,resize_function, width, height).write(illusion)
 		end
 	end
 end

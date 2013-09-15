@@ -21,16 +21,16 @@ class Illusionist
 
 			#check for resize commands
 			if(query_hash.has_key?('w') || query_hash.has_key?('width'))
-				issusion = Illusion.new query_hash 
+				illusion = Illusion.new query_hash, env, full_path
 				
 				#create the illusion if nessicary
-				unless illustion.exists?
+				unless illusion.exists?
 					#write the illusion
 					illusion.write_resized_image
 				end
 				
 				#reate the file
-				self.body = Illusion.read
+				self.body = illusion.read
 			else
 				self.body = File.new(full_path)
 			end
